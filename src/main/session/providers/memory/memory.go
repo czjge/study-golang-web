@@ -41,13 +41,13 @@ func (st *SessionStore) Get(key interface{}) interface{} {
 	}
 }
 
-func (st *SessionStore) delete(key interface{}) error {
+func (st *SessionStore) Delete(key interface{}) error {
 	delete(st.value, key)
 	pder.SessionUpdate(st.sid)
 	return nil
 }
 
-func (st *SessionStore) SessionID() string {
+func (st *SessionStore) SessionId() string {
 	return st.sid
 }
 
@@ -66,7 +66,7 @@ func (pder *Provider) SessionRead(sid string) (session.Session, error) {
 		return element.Value.(*SessionStore), nil
 	} else {
 		sess, err := pder.SessionInit(sid)
-		return sess, nil
+		return sess, err
 	}
 	return nil, nil
 }
@@ -80,7 +80,7 @@ func (pder *Provider) SessionDestroy(sid string) error {
 	return nil
 }
 
-func (pder *Provider) SessionDC(maxlifetime int64) {
+func (pder *Provider) SessionGC(maxlifetime int64) {
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 

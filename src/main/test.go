@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"main/session"
 	_ "main/session/providers/memory"
 	"net/http"
