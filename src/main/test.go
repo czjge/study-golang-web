@@ -13,13 +13,43 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/websocket"
 )
+
+type Friend struct {
+	Fname string
+}
+
+type Person struct {
+	UserName string
+	Emails   []string
+	Friends  []*Friend
+}
 
 var globalSessions *session.Manager
 
 func init() {
 	globalSessions, _ = session.NewManager("memory", "gosessionid", 3600)
 	go globalSessions.GC()
+}
+
+func EmailDealWith(args ...interface{}) string {
+	ok := false
+	var s string
+	if len(args) == 1 {
+		s, ok = args[0].(string)
+	}
+	if !ok {
+		s = fmt.Sprint(args...)
+	}
+	// find the @ symbol
+	substrs := strings.Split(s, "@")
+	if len(substrs) != 2 {
+		return s
+	}
+	// replace the @ by " at "
+	return (substrs[0] + " at " + substrs[1])
 }
 
 func sayHelloName(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +92,19 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(h, strconv.FormatInt(crutime, 10))
 		token := fmt.Sprintf("%x", h.Sum(nil))
 
-		t, _ := template.ParseFiles("upload.gtpl")
-		t.Execute(w, token)
+		f1 := Friend{Fname: "minux.ma"}
+		f2 := Friend{Fname: "xushiwei"}
+		p := Person{UserName: "Astaxie",
+			Emails:  []string{"astaxie@beego.me", "astaxie@gmail.com"},
+			Friends: []*Friend{&f1, &f2}}
+
+		//t, _ := template.ParseFiles("upload.gtpl")
+		//t.Funcs(template.FuncMap{"bar": EmailDealWith}).Execute(w, map[string]interface{}{"token": token, "user": p})
+
+		t, _ := template.ParseFiles("tmpl/header.tmpl", "tmpl/content.tmpl", "tmpl/footer.tmpl")
+		t.ExecuteTemplate(w, "header", map[string]interface{}{"token": token, "user": p})
+		t.ExecuteTemplate(w, "content", map[string]interface{}{"token": token, "user": p})
+		t.ExecuteTemplate(w, "footer", map[string]interface{}{"token": token, "user": p})
 	} else {
 		r.ParseMultipartForm(32 << 20)
 		file, handler, err := r.FormFile("uploadfile")
@@ -96,13 +137,49 @@ func count(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, sess.Get("countnum"))
 }
 
-func main() {
-	http.HandleFunc("/", sayHelloName)
-	http.HandleFunc("/login", login)
-	http.HandleFunc("/upload", upload)
-	http.HandleFunc("/count", count)
-	err := http.ListenAndServe(":9090", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+func message(w http.ResponseWriter, r *http.Request) {
+	t, _ := template.ParseFiles("message.html")
+	w.Header().Set("Content-Type", "text/html")
+	t.Execute(w, nil)
+}
+
+func Echo(ws *websocket.Conn) {
+	var err error
+
+	for {
+		var reply string
+
+		if err = websocket.Message.Receive(ws, &reply); err != nil {
+			fmt.Println("Can't receive")
+			break
+		}
+
+		fmt.Println("Received back from client: " + reply)
+
+		msg := "Received: " + reply
+		fmt.Println("Sending to client: " + msg)
+
+		if err = websocket.Message.Send(ws, msg); err != nil {
+			fmt.Println("Can't send")
+			break
+		}
 	}
+}
+
+func main() {
+
+	http.Handle("/", websocket.Handler(Echo))
+	if err := http.ListenAndServe(":1234", nil); err != nil {
+		log.Fatal("ListenAndServe:", err)
+	}
+
+	//http.HandleFunc("/", sayHelloName)
+	// http.HandleFunc("/login", login)
+	// http.HandleFunc("/upload", upload)
+	// http.HandleFunc("/count", count)
+	// http.HandleFunc("/message", message)
+	// err := http.ListenAndServe(":9090", nil)
+	// if err != nil {
+	// 	log.Fatal("ListenAndServe: ", err)
+	// }
 }
