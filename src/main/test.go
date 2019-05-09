@@ -2,13 +2,14 @@ package main
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"main/session"
 	_ "main/session/providers/memory"
 	"net/http"
+	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
@@ -25,6 +26,30 @@ type Person struct {
 	UserName string
 	Emails   []string
 	Friends  []*Friend
+}
+
+type Args struct {
+	A, B int
+}
+
+type Quotient struct {
+	Quo, Rem int
+}
+
+type Arith int
+
+func (t *Arith) Multiply(args *Args, reply *int) error {
+	*reply = args.A * args.B
+	return nil
+}
+
+func (t *Arith) Divide(args *Args, quo *Quotient) error {
+	if args.B == 0 {
+		return errors.New("divide by zero")
+	}
+	quo.Quo = args.A / args.B
+	quo.Rem = args.A % args.B
+	return nil
 }
 
 var globalSessions *session.Manager
@@ -168,10 +193,19 @@ func Echo(ws *websocket.Conn) {
 
 func main() {
 
-	http.Handle("/", websocket.Handler(Echo))
-	if err := http.ListenAndServe(":1234", nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
+	arith := new(Arith)
+	rpc.Register(arith)
+	rpc.HandleHTTP()
+
+	err := http.ListenAndServe(":1234", nil)
+	if err != nil {
+		fmt.Println(err.Error())
 	}
+
+	// http.Handle("/", websocket.Handler(Echo))
+	// if err := http.ListenAndServe(":1234", nil); err != nil {
+	// 	log.Fatal("ListenAndServe:", err)
+	// }
 
 	//http.HandleFunc("/", sayHelloName)
 	// http.HandleFunc("/login", login)
