@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"main/session"
 	_ "main/session/providers/memory"
 	"net/http"
-	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
@@ -150,6 +150,9 @@ func upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func count(w http.ResponseWriter, r *http.Request) {
+
+	fmt.Println(r.URL.Query()["a"])
+
 	sess := globalSessions.SessionStart(w, r)
 	ct := sess.Get("countnum")
 	if ct == nil {
@@ -193,27 +196,27 @@ func Echo(ws *websocket.Conn) {
 
 func main() {
 
-	arith := new(Arith)
-	rpc.Register(arith)
-	rpc.HandleHTTP()
+	// arith := new(Arith)
+	// rpc.Register(arith)
+	// rpc.HandleHTTP()
 
-	err := http.ListenAndServe(":1234", nil)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	// err := http.ListenAndServe(":1234", nil)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
 
 	// http.Handle("/", websocket.Handler(Echo))
 	// if err := http.ListenAndServe(":1234", nil); err != nil {
 	// 	log.Fatal("ListenAndServe:", err)
 	// }
 
-	//http.HandleFunc("/", sayHelloName)
-	// http.HandleFunc("/login", login)
-	// http.HandleFunc("/upload", upload)
-	// http.HandleFunc("/count", count)
-	// http.HandleFunc("/message", message)
-	// err := http.ListenAndServe(":9090", nil)
-	// if err != nil {
-	// 	log.Fatal("ListenAndServe: ", err)
-	// }
+	http.HandleFunc("/", sayHelloName)
+	http.HandleFunc("/login", login)
+	http.HandleFunc("/upload", upload)
+	http.HandleFunc("/count", count)
+	http.HandleFunc("/message", message)
+	err := http.ListenAndServe(":9090", nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }

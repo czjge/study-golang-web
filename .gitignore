@@ -1,3 +1,7 @@
 /.idea
-/src/github.com/*
-/src/golang.org/*
+/src/github.com
+/src/golang.org
+/bin
+/pkg
+
+*.exe
